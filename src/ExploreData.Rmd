@@ -61,3 +61,42 @@ furseal_events <- read_csv("data/raw_data/Czapanskiy fur seal analysis/test.even
     datetime_col = "datetime"
   )
 ```
+
+```{r data_summary}
+furseal_sensors
+furseal_events
+as.data.frame(furseal_sensors)
+as.data.frame(furseal_events)
+```
+
+## Verify model fitting, prediction, and visualization
+
+The following defines and fits a Stickleback model, makes predictions, and visualizes the results. Note: it takes a while to run!
+
+```{r fit}
+tsc <- compose_tsc(module = "interval_based", 
+                   algorithm = "SupervisedTimeSeriesForest",
+                   params = list(n_estimators = 2L, random_state = 4321L),
+                   columns = columns(furseal_sensors))
+sb <- Stickleback(tsc, 
+                  win_size = 15, 
+                  tol = 5, 
+                  nth = 10, 
+                  n_folds = 2, 
+                  seed = 1234)
+
+sb_fit(sb, furseal_sensors, furseal_events)
+```
+
+```{r predict}
+predictions <- sb_predict(sb, furseal_sensors)
+outcomes <- sb_assess(sb, predictions, furseal_events)
+outcomes
+```
+
+## Visualize predictions
+
+```{r viz}
+deployid <- deployments(furseal_events)[1]
+sb_plot_predictions(deployid, furseal_sensors, predictions, outcomes)
+```
