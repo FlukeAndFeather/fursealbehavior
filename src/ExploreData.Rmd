@@ -1,0 +1,12 @@
+---
+title: "Explore fur seal data"
+author: "Max Czapanskiy"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rstickleback)
+library(tidyverse)
+```
