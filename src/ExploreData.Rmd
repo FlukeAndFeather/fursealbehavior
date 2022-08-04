@@ -10,3 +10,54 @@ knitr::opts_chunk$set(echo = TRUE)
 library(rstickleback)
 library(tidyverse)
 ```
+
+## Fix errors
+
+I identified two issues that were causing problems with the fur seal data and Stickleback.
+
+1. You've discovered a bug in rstickleback where converting a Sensors object to a data.frame encounters an error if there's more than one sensor column and the datetime column is named something other than "datetime". In your case it's "gmt", so as a workaround I renamed it. I opened [Issue #33](https://github.com/FlukeAndFeather/rstickleback/issues/33) to track it.
+
+2. The events were misaligned with the sensors. I wrote a function called `nearest()` for snapping the event times to the nearest sensor times. The error message is incomprehensible, so I opened [Issue #34](https://github.com/FlukeAndFeather/rstickleback/issues/34) to track it.
+
+```{r load}
+nearest <- function(x, y) {
+  # Find closest element in y to each element in x
+  # Assumes both sorted
+  stopifnot(!is.unsorted(x), !is.unsorted(y))
+  x_left <- pmax(findInterval(x, y), 1)
+  x_right <- pmin(findInterval(x, y) + 1, length(y))
+  err_left <- abs(x - y[x_left])
+  err_right <- abs(x - y[x_right])
+  if_else(err_left < err_right, y[x_left], y[x_right])
+}
+# Keep only the first 10 hours of each deployment
+furseal_sensors_df <- read_csv("data/raw_data/Czapanskiy fur seal analysis/test.accel2.csv",
+                               show_col_types = FALSE) %>% 
+  rename(datetime = gmt) %>% 
+  group_by(Animal.ID) %>% 
+  filter(datetime <= datetime[1] + 10 * 3600) %>% 
+  ungroup()
+furseal_sensors <- furseal_sensors_df %>% 
+  Sensors(
+    deployid_col = "Animal.ID",
+    datetime_col = "datetime",
+    sensor_cols = c("Corrected.Depth", "int.aX", "int.aY", "int.aZ")
+  )
+furseal_events <- read_csv("data/raw_data/Czapanskiy fur seal analysis/test.events2.csv",
+                           show_col_types = FALSE) %>% 
+  mutate(datetime = nearest(gmt, furseal_sensors_df$datetime)) %>% 
+  left_join(
+    furseal_sensors_df %>% 
+      group_by(Animal.ID) %>% 
+      summarize(event_lower = first(datetime) + 50 / 16 + 1,
+                event_upper = last(datetime) - 50 / 16 + 1),
+    by = "Animal.ID"
+  ) %>% 
+  filter(datetime >= event_lower,
+         datetime <= event_upper) %>% 
+  ungroup() %>% 
+  Events(
+    deployid_col = "Animal.ID",
+    datetime_col = "datetime"
+  )
+```
