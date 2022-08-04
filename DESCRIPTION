@@ -1,0 +1,11 @@
+Package: fursealbehavior
+Title: Exploring fur seal behavior for use with Stickleback.
+Authors@R: 
+    person("Max", "Czapanskiy", , "maxczapanskiy@gmail.com", role = c("aut", "cre"),
+           comment = c("ORCID-ID" = "0000-0002-6302-905X"))
+Imports: 
+    rstickleback
+Suggests: 
+    tidyverse
+Remotes:
+    FlukeAndFeather/rstickleback
